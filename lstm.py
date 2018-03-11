@@ -17,6 +17,7 @@ from keras.layers import Dense
 from keras.layers import LSTM
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+from test_accuracy import PredictionTester
 
 
 # CONSTANTS
@@ -85,8 +86,9 @@ def main():
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
 
     # LSTM fit
+    tester = PredictionTester(test_x, test_y)
     history = model.fit(train_x, train_y, epochs=EPOCHS, batch_size=BATCH_SIZE, validation_data=(val_x, val_y), verbose=2,
-                        shuffle=False)
+                        shuffle=False, callbacks=[tester])
 
     # plot history
     plt.plot(history.history['loss'], label='train')
