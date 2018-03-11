@@ -33,8 +33,8 @@ NEURONS_HIDDEN_LAYER_1 = 10  # hyperparameter
 NEURONS_OUTPUT_LAYER = 1
 LOSS_FUNCTION = 'mae'  # hyperparameter
 OPTIMIZER = 'adam'  # let's keep it fixed
-EPOCHS = 100  # hyperparameter
-BATCH_SIZE = 100  # hyperparameter
+EPOCHS = 1000  # hyperparameter
+BATCH_SIZE = 50  # hyperparameter
 
 
 # FUNCTION DEFINITIONS
