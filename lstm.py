@@ -33,20 +33,20 @@ OUTPUT_DIM = 1
 NEURONS_HIDDEN_LAYER_1 = 10  # hyperparameter
 NEURONS_OUTPUT_LAYER = 1
 LOSS_FUNCTION = 'mae'  # hyperparameter
-OPTIMIZER = 'adamax'  # let's keep it fixed
+OPTIMIZER = 'adam'  # let's keep it fixed
 EPOCHS = 1000  # hyperparameter
-BATCH_SIZE = 50  # hyperparameter
+BATCH_SIZE = 100  # hyperparameter
 
 
 # FUNCTION DEFINITIONS
 def preprocess_dataset(_X, look_back=LOOK_BACK):
     # process dataset so that np.arrays of features and output are extracted
     x, y = [], [] # features (x), output (y)
-    y = _X[1:, 3][:-LOOK_BACK]
-    for i in range(0, len(_X)-1-LOOK_BACK):
+    y = _X[1:, 3][LOOK_BACK:]
+    for i in range(LOOK_BACK, len(_X)-1):
         window = []
-        for j in range(LOOK_BACK):
-            window.append(_X[i + j, :])
+        for j in range(LOOK_BACK, 0, -1):
+            window.append(_X[i - j, :])
         x.append(window)
     return np.array(x), np.array(y)
 
@@ -94,6 +94,7 @@ def main():
                         shuffle=False, callbacks=[tester])
 
     # plot history
+    plt.figure()
     plt.plot(history.history['loss'], label='train')
     plt.plot(history.history['val_loss'], label='test')
     plt.xlabel('Epoch')
