@@ -1,0 +1,39 @@
+*LECTURE NOTES*
+
+Author: Ben
+Date: 12th March
+Scope: Models for sequential data (Sequences, MM, Naive Bayes, Embedding models, RNN, LSTM)
+
+Until then, the only possible math problems given were covered in the homeworks.
+From this lecture on there will be homework anymore, except the practice exam.
+
+Feature extraction enables use to use priorily seen regressors or classifiers, here we have to tune the window size, keep time dimension (walk-forward validation - use case) - check slide 11. WE HAVE TO CHANGE OUR APPROACH, CURRENTLY A LARGE TEST SET IS TESTED. BUT WE SHOULD TEST ON 5% OR SO THEN PREDICT 1, ETC. - BOTH FOR VALIDATION AND TEST SET. this is a theoretical case. this means that we could in production always retrain the model with all data until now, but this does not have to happen necessarily. So if we assume we retrain every 24h, then...
+
+Naive Bayes Assumption (similar to 0-order MM)
+
+Markov Assumption (a random variable only depends on x (order of the MM) instances preceding it)
+
+Laplace Smoothing (= addition of pseudo-counts)
+
+Embedding of a word (left and right neighbor distributions) is a proxy for its meaning (semantics)
+
+1-hot vector; softmax activation; Word2Vec; Standard W2V embeddings;
+
+RNN: Deep Learning
+	For music notation: use sparse matrix notation
+		Vocabulary: all chords (Noten), Instances: classical pieces (fix style or composer: Mozart, Schubert);
+	
+	Ressource on LSTM: COLAH (GITHUB), concatentation means that basically neurons are put on the side on same level;
+	Backpropagation through time
+	
+	Trained RNNs do not have long-term memory, therefore LSTMs are required.
+	
+ResSource: KARPATHY (GITHUB), COLAH (GITHUB)
+
+Stimulations:
+	- Test also on RNN
+	- think about time window (basically we would do feature extraction)
+	- Creation of classical music with LSTM.
+	- Build Markov Model using frequencies from text (maybe look at x=2 last words) and create random corpus
+	- Donald Trumpf (predicted Donald Trump messages
+	
