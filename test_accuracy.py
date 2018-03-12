@@ -33,11 +33,11 @@ class PredictionTester(keras.callbacks.Callback):
         self.graph.plot(predictions, label='predicted')
         self.graph.plot(actual, label='actual')
         self.graph.set_xlabel('Time')
-        self.graph.set_xlabel('Weighted price (USD)')
+        self.graph.set_ylabel('Weighted price (USD)')
         self.graph.set_title('Epoch %d' % epoch)
         self.graph.legend()
         self.figure.show()
-        plt.pause(1)
+        plt.pause(0.01)
         return
 
     def on_batch_begin(self, batch, logs={}):
