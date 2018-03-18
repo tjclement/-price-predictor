@@ -24,18 +24,18 @@ from test_accuracy import PredictionTester
 START_TIME = time.time() # start of total execution time measurement
 TRAIN_PROPORTION = 0.7 # training set
 VAL_PROPORTION = 0.1 # validations set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
-LOOK_BACK = 5 # hyperparameter
+LOOK_BACK = 4 # hyperparameter
 SEED = 0
 BATCHES = 1
 FEATURE_DIM = 4
 OUTPUT_DIM = 1
 
-NEURONS_HIDDEN_LAYER_1 = 10  # hyperparameter
+NEURONS_HIDDEN_LAYER_1 = 9  # hyperparameter
 NEURONS_OUTPUT_LAYER = 1
 LOSS_FUNCTION = 'mae'  # hyperparameter
 OPTIMIZER = 'adam'  # let's keep it fixed
-EPOCHS = 1000  # hyperparameter
-BATCH_SIZE = 50  # hyperparameter
+EPOCHS = 434  # hyperparameter
+BATCH_SIZE = 224  # hyperparameter
 
 
 # FUNCTION DEFINITIONS
