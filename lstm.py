@@ -3,7 +3,7 @@
 
 """
 KICKSTARTER: Ben
-DATE: 10-11 March
+KICKSTART DATE: 10-11 March
 """
 
 # IMPORT OF LIBRARIES
@@ -23,7 +23,7 @@ from test_accuracy import PredictionTester
 # CONSTANTS
 START_TIME = time.time() # start of total execution time measurement
 TRAIN_PROPORTION = 0.7 # training set
-VAL_PROPORTION = 0.1 # validations set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
+VAL_PROPORTION = 0.1 # validation set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
 LOOK_BACK = 5 # hyperparameter
 SEED = 0
 BATCHES = 1
@@ -41,8 +41,8 @@ BATCH_SIZE = 50  # hyperparameter
 # FUNCTION DEFINITIONS
 def preprocess_dataset(_X, look_back=LOOK_BACK):
     # process dataset so that np.arrays of features and output are extracted
-    x, y = [], [] # features (x), output (y)
-    y = _X[1:, 3]
+    x= [] # features (x)
+    y = _X[1:, 3] # output (y)
     for i in range(0, len(_X)-1):
          x.append(_X[i, :])
     return np.array(x), np.array(y)
@@ -57,13 +57,13 @@ def main():
         .astype('float32')  # raw <np.ndarray>
 
     # normalization of dataset (recommended for LSTM) (comment out to check numbers easier)
-    #scaler = MinMaxScaler(feature_range=(0, 1))
-    #X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
+    # scaler = MinMaxScaler(feature_range=(0, 1))
+    # X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
 
     # split of dataset into training, validation and test set
     train_size = int(len(X) * TRAIN_PROPORTION)
     val_size = int(len(X) * VAL_PROPORTION)
-    test_size = len(X) - train_size - val_size
+    # test_size = len(X) - train_size - val_size
     X_train, X_val, X_test = X[0:train_size, :], X[train_size:train_size+val_size, :], X[train_size+val_size:len(X), :]
 
     # extraction of features (x) and output (y)
@@ -96,7 +96,7 @@ def main():
     plt.xlabel('Epoch')
     plt.ylabel('Loss (%s)' % LOSS_FUNCTION)
     plt.legend()
-    plt.show() # shows plot of loss function over epochs of training (comment: without normalization it is crap)
+    plt.show() # shows plot of loss function over epochs of training
 
     """
     # LSTM evaluation on the test set

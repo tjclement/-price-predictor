@@ -28,6 +28,10 @@ Take 5h (10-D) and predict the 6th hour's price (1-D)
 
 ??? how to cope with the memory stuff
 
+feature space                                                                                           output space (this line is only expl.)
+<low(t=1h)>,<max(t=1h)>,<vol(t=1h)>,<price(t=1h)>,...,<low(t=5h)>,<max(t=5h)>,<vol(t=5h)>,<price(t=5h)>,<price(t=6h)>
 
-
-
+Benchmarks:
+	*Algorithm*			*Hyperparameters*	*Objective Function*
+	KNeighborsRegressor		Neighbors		Min mean_squared_error
+	
