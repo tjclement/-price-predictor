@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-KICKSTARTER: Ben
-KICKSTART DATE: 10-11 March
+Stateless LSTM with trunctated BPTT for Stock-Price Prediction with a TensorFlow backend
+Authors: BW, TC, YD, YK and AS.
 """
 
 # IMPORT OF LIBRARIES
@@ -22,99 +22,123 @@ from test_accuracy import PredictionTester
 
 # CONSTANTS
 START_TIME = time.time() # start of total execution time measurement
-TRAIN_PROPORTION = 0.7 # training set
-VAL_PROPORTION = 0.1 # validation set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
-LOOK_BACK = 5 # hyperparameter
-VAL_PROPORTION = 0.1 # validations set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
-LOOK_BACK = 4 # hyperparameter
-SEED = 0
-BATCHES = 1
-FEATURE_DIM = 4
-OUTPUT_DIM = 1
+# VAL_PROPORTION = 0.1 # validation set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
+# VAL_PROPORTION = 0.1 # validations set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
 
-NEURONS_HIDDEN_LAYER_1 = 9  # hyperparameter
+NEURONS_HIDDEN_LAYER_1 = 9  # HP
 NEURONS_OUTPUT_LAYER = 1
-LOSS_FUNCTION = 'mae'  # hyperparameter
-OPTIMIZER = 'adam'  # let's keep it fixed
-EPOCHS = 434  # hyperparameter
-BATCH_SIZE = 224  # hyperparameter
-
+FEATURES_NUM = 4
 
 # FUNCTION DEFINITIONS
-def preprocess_dataset(_X, look_back=LOOK_BACK):
+def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = True):
     # process dataset so that np.arrays of features and output are extracted
+    x, x_primes = [], [] # features (x)
+    y = X[1:, 3][look_back:] # output (y)
+    y = X[look_back:, 3]  # output (y)
 
-    x= [] # features (x)
-    y = _X[1:, 3] # output (y)
-    for i in range(0, len(_X)-1):
-         x.append(_X[i, :])
-
-    x, y = [], [] # features (x), output (y)
-    y = _X[1:, 3][LOOK_BACK:]
-    for i in range(LOOK_BACK, len(_X)-1):
+    for i in range(0, len(X)-look_back):
         window = []
-        for j in range(LOOK_BACK, 0, -1):
-            window.append(_X[i - j, :])
+        for j in range(i, i+look_back):
+            # if i == j:
+            # x_primes.append(X[j,features_num-1])
+            window.append(X[j, :])
+        top_row = window[0]
+        if normalized:
+            cur_mins, cur_maxs = [], []
+            #for i in range(0, len(window)): # applies element-wise division and subtraction with broadcasting on np.arrays
+            #    window[i] = (window[i]/top_row)-1
+            for a in range(0, features_num):
+                window = np.array(window)
+                cur_mins.append(min(window[:, a]))
+                cur_maxs.append(max(window[:, a]))
+            x_primes.append([cur_mins[3], cur_maxs[3]])
+
+            for a in range(0, features_num):
+                window[:, a] = (window[:, a] - np.array(cur_mins[a])) / (np.array(cur_maxs[a]) - np.array(cur_mins[a]))
+
         x.append(window)
-
-    return np.array(x), np.array(y)
-
+    x, y, x_primes = np.array(x), np.array(y), np.array(x_primes)
+    if normalized:
+        # y = (y/x_primes)-1
+        for i in range(0, len(y)):
+            y[i] = (y[i] - x_primes[i][0]) / (x_primes[i][1] - x_primes[i][0])
+        return x, y, x_primes
+    else:
+        return x, y
 
 def main():
-    # fixation of random seed
+    # INITIAL ASSIGNMENT OF RANDOM SEED FOR REPRODUCIBILITY
+    SEED = 0
     np.random.seed(SEED)
 
-    # import of dataset X (change to curated_dataset_2.csv for the second dataset)
-    X = pd.read_csv('./data/curated_dataset_1.csv', usecols=[1, 2, 3, 4], engine='python').values \
-        .astype('float32')  # raw <np.ndarray>
+    # DATA SET IMPORT
+    X = pd.read_csv('./data/curated_dataset_1.csv', usecols=[1, 2, 3, 4]).values \
+        .astype('float32')
+        #(change to curated_dataset_2.csv for the second data set available in './data')
+        # optionally this could be an additional test set
 
-    # normalization of dataset (recommended for LSTM) (comment out to check numbers easier)
+    # SPLIT INTO TRAINING, VALIDATION AND TEST SET (TEST SET NOT TOUCHED ANYMORE UNTIL THE END FROM HERE ON IN TRAINING)
+    VAL_SIZE = 1000
+    TEST_SIZE = 5000
+    train_size = len(X)-VAL_SIZE-TEST_SIZE
+    X_train = X[0:train_size, :]  # first in time dimension
+    X_val = X[train_size:train_size+VAL_SIZE, :]
+    X_test = X[train_size+VAL_SIZE:, :]
 
-    # scaler = MinMaxScaler(feature_range=(0, 1))
-    # X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
+    # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
+    LOOK_BACK = 24*7 # [h], so 7 days, 1 week
+    train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
+    val_x_norm, val_y_norm, val_x_primes = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=True)
+        # test set normalization for input into the prediction (this is data available in the given real-use case)
+        # this included just that for a given window the minimum and maximum is known, which will always the be case
+    val_x, val_y = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=False)
+    test_x_norm, test_y_norm, test_x_primes = preprocess_dataset(X_test, look_back=LOOK_BACK, normalized=True)
+    test_x, test_y = preprocess_dataset(X_test, look_back=LOOK_BACK, normalized=False)
 
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
+    # RESHAPING FOR KERAS: required dimensions are number_of_samples * time_steps (look_back_number) * features_number
+    FEATURES_DIM = 4
+    train_x_norm = train_x_norm.reshape((len(train_x_norm), LOOK_BACK, FEATURES_DIM))
+    val_x_norm = val_x_norm.reshape((len(val_x_norm), LOOK_BACK, FEATURES_DIM))
+    test_x_norm = test_x_norm.reshape((len(test_x_norm), LOOK_BACK, FEATURES_DIM))
 
-
-    # split of dataset into training, validation and test set
-    train_size = int(len(X) * TRAIN_PROPORTION)
-    val_size = int(len(X) * VAL_PROPORTION)
-    # test_size = len(X) - train_size - val_size
-    X_train, X_val, X_test = X[0:train_size, :], X[train_size:train_size+val_size, :], X[train_size+val_size:len(X), :]
-
-    # extraction of features (x) and output (y)
-    train_x, train_y = preprocess_dataset(X_train)
-    val_x, val_y = preprocess_dataset(X_val)
-    test_x, test_y = preprocess_dataset(X_test)
-
-    # reshaping (requirement for Keras input) (samples, timesteps, features)
-    train_x = train_x.reshape((len(train_x), LOOK_BACK, FEATURE_DIM))
-    val_x = val_x.reshape((len(val_x), LOOK_BACK, FEATURE_DIM))
-    test_x = test_x.reshape((len(test_x), LOOK_BACK, FEATURE_DIM))
-
-    # LSTM construction: Input Layer of feature space size, Hidden Layer, Output Layer (topology is hyperparameter)
-        # activation: tanh (default: bad), relu (better), None (linear, bad - highly fluctuating)
-        # recurrent_activation: hard_sigmoid (default, fine), relu (super bad)
+    # BUILDING OF STATELESS (stateful=False) LSTM WITH TRUNCATED BPTT (GIVEN BY LOOK_BACK) WITH SEQUENTIAL MODEL
     model = Sequential()
-    model.add(LSTM(NEURONS_HIDDEN_LAYER_1, input_shape=( train_x.shape[1], train_x.shape[2]), activation='selu',
-                   recurrent_activation='tanh', return_sequences=False))
-    model.add(Dense(NEURONS_OUTPUT_LAYER, activation='relu'))
-    model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
+        # LSTM LAYER
+    model.add(LSTM(NEURONS_HIDDEN_LAYER_1, input_shape=(LOOK_BACK, FEATURES_DIM), return_sequences=False))
+            # explore arguments: activation = 'selu', recurrent_activation = 'tanh'
+        # TERMINAL DENSE LAYER DELIVERING TO 1 OUTPUT NODE
+    model.add(Dense(NEURONS_OUTPUT_LAYER))
+            # explore arguments: activation='relu'
 
-    # LSTM fit
-    tester = PredictionTester(test_x, test_y, scaler)
-    history = model.fit(train_x, train_y, epochs=EPOCHS, batch_size=BATCH_SIZE, validation_data=(val_x, val_y), verbose=2,
-                        shuffle=False, callbacks=[tester])
+    # MODEL COMPILATION
+    BP_LOSS = 'mean_squared_error'  # back propagation loss
+    OPTIMIZER = 'adam'
+        # Adam - A Method for Stochastic Optimization (http://arxiv.org/abs/1412.6980v8)
+        # On the Convergence of Adam and Beyond (https://openreview.net/forum?id=ryQu7f-RZ)
+    model.compile(loss=BP_LOSS,optimizer=OPTIMIZER)
 
-    # plot history
+    # MODEL SUMMARY OUTPUT
+    model.summary()
+
+    # FITTING OF MODEL ONTO TRAINING DATA
+    EPOCHS = 50
+    BATCH_SIZE = 100
+    tester = PredictionTester(val_x_norm, val_y, val_x_primes) # see: test_accuracy.py module
+    history = model.fit(x=train_x_norm, y=train_y_norm, validation_data=(val_x_norm, val_y_norm), shuffle=True,
+                        epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=2, callbacks=[tester])
+
+    # PLOT HISTORY OF TRAINING AND VALIDATION LOSS OVER THE EPOCHS
+    OUTPUT_LOSS = 'mae'
     plt.figure()
     plt.plot(history.history['loss'], label='train')
-    plt.plot(history.history['val_loss'], label='test')
+    plt.plot(history.history['val_loss'], label='val')
     plt.xlabel('Epoch')
-    plt.ylabel('Loss (%s)' % LOSS_FUNCTION)
+    plt.ylabel('Loss (%s)' % OUTPUT_LOSS.upper())
     plt.legend()
-    plt.show() # shows plot of loss function over epochs of training
+    plt.show()
+
+    # FINAL EVALUATION ON TEST SET
+    # loss_and_metrics = model.evaluate(test_x_norm, test_y_norm, batch_size=BATCH_SIZE)
 
     """
     # LSTM evaluation on the test set

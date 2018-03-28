@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 class PredictionTester(keras.callbacks.Callback):
     features = []
     responses = []
+    features_primes = []
     figure = None
     graph = None
-    scaler = None
 
-    def __init__(self, features, responses, scaler):
+    def __init__(self, features, responses, features_primes):
         super().__init__()
         self.features = features
         self.responses = responses
-        self.scaler = scaler
+        self.features_primes = features_primes
         self.figure = plt.figure()
         self.graph = self.figure.add_subplot(111)
         return
@@ -28,18 +28,19 @@ class PredictionTester(keras.callbacks.Callback):
         return
 
     def on_epoch_end(self, epoch, logs={}):
-        min, scale = self.scaler.min_[-1], self.scaler.scale_[-1]
-        predictions = np.flip(self.model.predict(self.features), 0)
-        actual = np.flip(self.responses[:-1], 0)
+        features_primes = self.features_primes # for back-transforming the price
+        predictions = self.model.predict(self.features, batch_size=100)
+        actual = self.responses # Tom tricked me and I did not see. Shame on me. Let's not flip it.
 
-        predictions = (predictions / scale) - min
-        actual = (actual / scale) - min
+        # reverse-transform (Real-Use Scenario): element-wise addition before element-wise multiplication
+        for i in range(0, len(predictions)):
+            predictions[i] = predictions[i] * (features_primes[i][1] - features_primes[i][0]) + features_primes[i][0]
 
         self.graph.clear()
         self.graph.plot(predictions, label='predicted')
         self.graph.plot(actual, label='actual')
-        self.graph.set_xlabel('Time')
-        self.graph.set_ylabel('Weighted price (USD)')
+        self.graph.set_xlabel('Time [h]')
+        self.graph.set_ylabel('Weighted price [USD]')
         self.graph.set_title('Epoch %d' % epoch)
         self.graph.legend()
         self.figure.show()
