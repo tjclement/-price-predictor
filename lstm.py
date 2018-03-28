@@ -23,13 +23,10 @@ from test_accuracy import PredictionTester
 # CONSTANTS
 START_TIME = time.time() # start of total execution time measurement
 TRAIN_PROPORTION = 0.7 # training set
-<<<<<<< HEAD
 VAL_PROPORTION = 0.1 # validation set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
 LOOK_BACK = 5 # hyperparameter
-=======
 VAL_PROPORTION = 0.1 # validations set, hence TEST_PROPORTION = 1 - TRAIN_PROPORTION - VAL_PROPORTION
 LOOK_BACK = 4 # hyperparameter
->>>>>>> 56592c414dc0f82ea48eac1a007b39707d9794b2
 SEED = 0
 BATCHES = 1
 FEATURE_DIM = 4
@@ -46,12 +43,12 @@ BATCH_SIZE = 224  # hyperparameter
 # FUNCTION DEFINITIONS
 def preprocess_dataset(_X, look_back=LOOK_BACK):
     # process dataset so that np.arrays of features and output are extracted
-<<<<<<< HEAD
+
     x= [] # features (x)
     y = _X[1:, 3] # output (y)
     for i in range(0, len(_X)-1):
          x.append(_X[i, :])
-=======
+
     x, y = [], [] # features (x), output (y)
     y = _X[1:, 3][LOOK_BACK:]
     for i in range(LOOK_BACK, len(_X)-1):
@@ -59,7 +56,7 @@ def preprocess_dataset(_X, look_back=LOOK_BACK):
         for j in range(LOOK_BACK, 0, -1):
             window.append(_X[i - j, :])
         x.append(window)
->>>>>>> 56592c414dc0f82ea48eac1a007b39707d9794b2
+
     return np.array(x), np.array(y)
 
 
@@ -72,13 +69,13 @@ def main():
         .astype('float32')  # raw <np.ndarray>
 
     # normalization of dataset (recommended for LSTM) (comment out to check numbers easier)
-<<<<<<< HEAD
+
     # scaler = MinMaxScaler(feature_range=(0, 1))
     # X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
-=======
+
     scaler = MinMaxScaler(feature_range=(0, 1))
     X = scaler.fit_transform(X) # column-wise MinMax scaled np.ndarray
->>>>>>> 56592c414dc0f82ea48eac1a007b39707d9794b2
+
 
     # split of dataset into training, validation and test set
     train_size = int(len(X) * TRAIN_PROPORTION)
