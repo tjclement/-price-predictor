@@ -44,6 +44,7 @@ from test_accuracy import PredictionTester
 
 
 # CONSTANTS
+START_TIME = time.time()
 NEURONS_HIDDEN_LAYER_1 = 9
 NEURONS_OUTPUT_LAYER = 1
 FEATURES_NUM = 4
@@ -131,7 +132,7 @@ def main():
     model.summary()
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 2
+    EPOCHS = 20
     BATCH_SIZE = 100
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,
@@ -201,7 +202,6 @@ def main():
     plt.title('Prediction on test set vs. actual')
     plt.legend()
     plt.show()
-    print('\n\n\nScript was successfully executed in %.8s s.' % (time.time() - START_TIME))
 
     # INVESTIGATION ON ADDITIONAL TEST DATA SET (ADDITIONAL TEST SET WITH HIGHER HANDICAP - TIME GAP)
     add_predictions = model.predict(add_x_norm)
@@ -232,6 +232,8 @@ def main():
     plt.title('Prediction on additional test set vs. actual')
     plt.legend()
     plt.show()
+
+    print('\nScript was successfully executed in %.8s s.' % (time.time() - START_TIME))
 
 # SCRIPT EXECUTION
 if __name__ == '__main__':

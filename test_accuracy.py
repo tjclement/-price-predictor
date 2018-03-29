@@ -77,7 +77,7 @@ class PredictionTester(keras.callbacks.Callback):
         self.graph.plot(actual, label='actual')
         self.graph.set_xlabel('Time [h]')
         self.graph.set_ylabel('Weighted price [USD]')
-        self.graph.set_title('Epoch %d (Validation set) (in USD space)' % epoch)
+        self.graph.set_title('Epoch %d (Validation set) (in USD space)' % (epoch+1))
         self.graph.legend()
         self.figure.show()
         plt.pause(0.001)
