@@ -92,7 +92,7 @@ def main():
     train_size = len(X)-VAL_SIZE-TEST_SIZE
     X_train = X[0:train_size, :]  # first in time dimension
     X_val = X[train_size:train_size+VAL_SIZE, :] # second in time dimension
-    X_test = X[train_size+VAL_SIZE:, :] # third in time dimension (handicap)
+    X_test = X[train_size:train_size+VAL_SIZE, :] # X[train_size+VAL_SIZE:, :] # third in time dimension (handicap)
 
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
     LOOK_BACK = 24*7 # [h], so 7 days, 1 week
@@ -132,7 +132,7 @@ def main():
     model.summary()
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 20
+    EPOCHS = 10
     BATCH_SIZE = 100
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,

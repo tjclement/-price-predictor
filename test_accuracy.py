@@ -118,7 +118,7 @@ class PredictionTester(keras.callbacks.Callback):
         ae_val = 0
         for i in range(0, len(predictions)):
             ae_val += abs(predictions[i]-actual[i])
-        mae_val = ae_val / len(predictions_train)
+        mae_val = ae_val / len(predictions)
 
         print('\t in USD - train_rmse: %.4f - val_rmse: %.4f - train_mae: %.4f - val_mae: %.4f \\'
               ' beans_value: 69' % (rmse_train, rmse_val, mae_train, mae_val))
