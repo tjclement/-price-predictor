@@ -1,6 +1,8 @@
 # Manually added
 data/*
 .idea/*
+*.h5
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
