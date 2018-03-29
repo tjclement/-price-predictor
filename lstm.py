@@ -28,6 +28,8 @@ Used window-normalization (example with LOOK_BACK = 2):
     reverse_transform of prediction (uses row stored above*) done by LSTM (to calculate evaluation metrics):
         x_(row=a, col=b) = (x_(row=a, col=b) + 1) * x_(row=0, col=b)
 """
+from models.linear_regression import LinearRegressionModel
+from models.lstm import LSTMModel
 
 print('Good afternoon, gentlemen!')
 
@@ -48,6 +50,20 @@ START_TIME = time.time()
 NEURONS_HIDDEN_LAYER_1 = 9
 NEURONS_OUTPUT_LAYER = 1
 FEATURES_NUM = 4
+FEATURES_DIM = 4
+
+EPOCHS = 10
+BATCH_SIZE = 100
+
+LOOK_BACK = 24*7 # [h], so 7 days, 1 week
+
+BP_LOSS = 'mean_squared_error'  # back propagation loss
+OPTIMIZER = 'adam'
+    # Adam - A Method for Stochastic Optimization (http://arxiv.org/abs/1412.6980v8)
+    # On the Convergence of Adam and Beyond (https://openreview.net/forum?id=ryQu7f-RZ)
+
+MODEL = LSTMModel(NEURONS_HIDDEN_LAYER_1, LOOK_BACK, FEATURES_DIM, NEURONS_OUTPUT_LAYER)
+# MODEL = LinearRegressionModel(LOOK_BACK, FEATURES_DIM, NEURONS_OUTPUT_LAYER)
 
 # FUNCTION DEFINITIONS
 def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = True):
@@ -95,7 +111,6 @@ def main():
     X_test = X[train_size:train_size+VAL_SIZE, :] # X[train_size+VAL_SIZE:, :] # third in time dimension (handicap)
 
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
-    LOOK_BACK = 24*7 # [h], so 7 days, 1 week
     train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
     train_x, train_y = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=False)
     val_x_norm, val_y_norm, val_x_primes = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=True)
@@ -107,33 +122,21 @@ def main():
     add_x, add_y = preprocess_dataset(X_additional, look_back=LOOK_BACK, normalized=False)
 
     # RESHAPING FOR KERAS: required dimensions are number_of_samples * time_steps (look_back_number) * features_number
-    FEATURES_DIM = 4
     train_x_norm = train_x_norm.reshape((len(train_x_norm), LOOK_BACK, FEATURES_DIM))
     val_x_norm = val_x_norm.reshape((len(val_x_norm), LOOK_BACK, FEATURES_DIM))
     test_x_norm = test_x_norm.reshape((len(test_x_norm), LOOK_BACK, FEATURES_DIM))
         # additional dataset
     add_x_norm = add_x_norm.reshape((len(add_x_norm), LOOK_BACK, FEATURES_DIM))
 
-    # BUILDING OF STATELESS (stateful=False) LSTM WITH TRUNCATED BPTT (GIVEN BY LOOK_BACK) WITH SEQUENTIAL MODEL
-    model = Sequential()
-        # LSTM LAYER
-    model.add(LSTM(NEURONS_HIDDEN_LAYER_1, input_shape=(LOOK_BACK, FEATURES_DIM), return_sequences=False))
-        # TERMINAL DENSE LAYER DELIVERING TO 1 OUTPUT NODE
-    model.add(Dense(NEURONS_OUTPUT_LAYER))
+    model = MODEL
 
     # MODEL COMPILATION
-    BP_LOSS = 'mean_squared_error'  # back propagation loss
-    OPTIMIZER = 'adam'
-        # Adam - A Method for Stochastic Optimization (http://arxiv.org/abs/1412.6980v8)
-        # On the Convergence of Adam and Beyond (https://openreview.net/forum?id=ryQu7f-RZ)
     model.compile(loss=BP_LOSS, optimizer=OPTIMIZER)
 
     # MODEL SUMMARY OUTPUT
     model.summary()
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 10
-    BATCH_SIZE = 100
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,
               batch_size=BATCH_SIZE, verbose=2, callbacks=[tester])
