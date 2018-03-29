@@ -30,6 +30,7 @@ NEURONS_OUTPUT_LAYER = 1
 FEATURES_NUM = 4
 
 # FUNCTION DEFINITIONS
+"""
 def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = True):
     # process dataset so that np.arrays of features and output are extracted
     x, x_primes = [], [] # features (x)
@@ -65,6 +66,33 @@ def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = T
         return x, y, x_primes
     else:
         return x, y
+"""
+def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = True):
+    # process dataset so that np.arrays of features and output are extracted
+    x, x_primes = [], [] # features (x)
+    y = X[1:, 3][look_back:] # output (y)
+    y = X[look_back:, 3]  # output (y)
+
+    for i in range(0, len(X)-look_back):
+        window = []
+        for j in range(i, i+look_back):
+            # if i == j:
+            # x_primes.append(X[j,features_num-1])
+            window.append(X[j, :])
+        top_row = window[0]
+        if normalized:
+            first_row = window[0]
+            for i in range(0, len(window)): # applies element-wise division and subtraction with broadcasting on np.arrays
+                window[i] = (window[i]/top_row)-1
+            x_primes.append(first_row[3])
+        x.append(window)
+    x, y, x_primes = np.array(x), np.array(y), np.array(x_primes)
+    if normalized:
+        y = (y/x_primes)-1
+        return x, y, x_primes
+    else:
+        return x, y
+
 
 def main():
     # INITIAL ASSIGNMENT OF RANDOM SEED FOR REPRODUCIBILITY
@@ -78,7 +106,7 @@ def main():
         # optionally this could be an additional test set
 
     # SPLIT INTO TRAINING, VALIDATION AND TEST SET (TEST SET NOT TOUCHED ANYMORE UNTIL THE END FROM HERE ON IN TRAINING)
-    VAL_SIZE = 1000
+    VAL_SIZE = 5000
     TEST_SIZE = 5000
     train_size = len(X)-VAL_SIZE-TEST_SIZE
     X_train = X[0:train_size, :]  # first in time dimension
@@ -88,6 +116,7 @@ def main():
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
     LOOK_BACK = 24*7 # [h], so 7 days, 1 week
     train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
+    train_x, train_y = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=False)
     val_x_norm, val_y_norm, val_x_primes = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=True)
         # test set normalization for input into the prediction (this is data available in the given real-use case)
         # this included just that for a given window the minimum and maximum is known, which will always the be case
@@ -121,43 +150,72 @@ def main():
     model.summary()
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 50
+    EPOCHS = 5
     BATCH_SIZE = 100
-    tester = PredictionTester(val_x_norm, val_y, val_x_primes) # see: test_accuracy.py module
-    history = model.fit(x=train_x_norm, y=train_y_norm, validation_data=(val_x_norm, val_y_norm), shuffle=True,
+    tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
+    history = model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm),
                         epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=2, callbacks=[tester])
+    print('Training finished.')
+
+    """"
+    # SAVE MODEL (including WEIGHTS) FOR LATER USE (CURRENTLY JUST BACK-UP)
+    # you require H5PY package: pip install h5py
+    SAVE A MODEL BY:
+            # serialize model to JSON
+            model_json = model.to_json()
+            with open("model.json", "w") as json_file:
+            json_file.write(model_json)
+            # serialize weights to HDF5
+            model.save_weights("model.h5")
+            print("Saved model to disk")
+    LOAD MODEL BY:
+            # load json and create model
+            json_file = open('model.json', 'r')
+            loaded_model_json = json_file.read()
+            json_file.close()
+            loaded_model = model_from_json(loaded_model_json)
+            # load weights into new model
+            loaded_model.load_weights("model.h5")
+            print("Loaded model from disk")
+            loaded_model.compile(...) # new model name: loaded_model
+    """
 
     # PLOT HISTORY OF TRAINING AND VALIDATION LOSS OVER THE EPOCHS
-    OUTPUT_LOSS = 'mae'
-    plt.figure()
-    plt.plot(history.history['loss'], label='train')
-    plt.plot(history.history['val_loss'], label='val')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss (%s)' % OUTPUT_LOSS.upper())
-    plt.legend()
-    plt.show()
+        # done inside the callback (see: test_accuracy)
 
     # FINAL EVALUATION ON TEST SET
-    # loss_and_metrics = model.evaluate(test_x_norm, test_y_norm, batch_size=BATCH_SIZE)
+    test_predictions = model.predict(test_x_norm)
+    for i in range(0, len(test_predictions)):
+        test_predictions[i] = (test_predictions[i] + 1) * test_x_primes[i]
+    print ('\n\n\n----------------------------------------------------------')
+    print ('------------------------ TEST SET ------------------------')
 
-    """
-    # LSTM evaluation on the test set
-    y_predicted = predict(test_x)
+    # RMSE (root mean squared error) FOR TEST
+    se_test = 0
+    for i in range(0, len(test_predictions)):
+        se_test += (test_predictions[i] - test_y[i]) ** 2
+    mse_test = se_test / len(test_predictions)
+    rmse_test = math.sqrt(mse_test)
 
-    inv_yhat = concatenate((yhat, test_X[:, 1:]), axis=1)
-    inv_yhat = scaler.inverse_transform(inv_yhat)
-    inv_yhat = inv_yhat[:, 0]
-    # invert scaling for actual
-    test_y = test_y.reshape((len(test_y), 1))
-    inv_y = concatenate((test_y, test_X[:, 1:]), axis=1)
-    inv_y = scaler.inverse_transform(inv_y)
-    inv_y = inv_y[:, 0]
-    # calculate RMSE
-    rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
-    print('Test RMSE: %.3f' % rmse)
-    """
+    # MAE (mean absolute error) FOR TEST
+    ae_test = 0
+    for i in range(0, len(test_predictions)):
+        ae_test += abs(test_predictions[i] - test_y[i])
+    mae_test = ae_test / len(test_predictions)
+    print('Final test on TEST set (size: %i) was done with rmse_test: %.4f - mae_test %.4f' % (len(test_predictions, rmse_test, mae_test)))
 
-    print('Script was successfully executed in %.8s s.' % (time.time() - START_TIME))
+    # TEST PLOT
+    plt.figure()
+    plt.plot(test_predictions, label='predictions')
+    plt.plot(test_y, label='actual')
+    plt.xlabel('Time [h]')
+    plt.ylabel('Weighted price [USD]')
+    plt.title('Prediction on test set vs. actual')
+    plt.legend()
+    plt.show()
+    print('\n\n\nScript was successfully executed in %.8s s.' % (time.time() - START_TIME))
+
+    # investigate second dataset
 
 # SCRIPT EXECUTION
 if __name__ == '__main__':
