@@ -30,6 +30,7 @@ Used window-normalization (example with LOOK_BACK = 2):
 """
 from models.linear_regression import LinearRegressionModel
 from models.lstm import LSTMModel
+from models.tom import TomModel
 
 print('Good afternoon, gentlemen!')
 
@@ -64,6 +65,7 @@ OPTIMIZER = 'adam'
 
 MODEL = LSTMModel(NEURONS_HIDDEN_LAYER_1, LOOK_BACK, FEATURES_DIM, NEURONS_OUTPUT_LAYER)
 # MODEL = LinearRegressionModel(LOOK_BACK, FEATURES_DIM, NEURONS_OUTPUT_LAYER)
+# MODEL = TomModel(LOOK_BACK, FEATURES_DIM, NEURONS_OUTPUT_LAYER)
 
 # FUNCTION DEFINITIONS
 def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = True):
