@@ -45,7 +45,7 @@ from test_accuracy import PredictionTester
 
 # CONSTANTS
 START_TIME = time.time()
-NEURONS_HIDDEN_LAYER_1 = 9
+NEURONS_HIDDEN_LAYER_1 = 2
 NEURONS_OUTPUT_LAYER = 1
 FEATURES_NUM = 4
 
@@ -89,14 +89,14 @@ def main():
     # SPLIT FIRST DATA SET INTO TRAINING AND VALIDATION
     VAL_SIZE = 24*7*20 # 4 months
     train_size = len(X)-VAL_SIZE # -TEST_SIZE
-    X_train = X[0:train_size, :]  # first in time dimension
+    X_train = X[:train_size, :]  # first in time dimension
     X_val = X[train_size:, :] # second in time dimension
 
     # MAKE SECOND DATASET THE TEST SET
     X_test = X_additional  # third in time dimension with 1 year split to first part
 
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
-    LOOK_BACK = 24*7 # [h], so 7 days, 1 week
+    LOOK_BACK = 6 # [h], so 7 days, 1 week # ADJUSTMENT TO 6h
 
         # TRAIN
     train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
@@ -120,22 +120,27 @@ def main():
     model = Sequential()
         # LSTM LAYER
     model.add(LSTM(NEURONS_HIDDEN_LAYER_1, input_shape=(LOOK_BACK, FEATURES_DIM), return_sequences=False))
+        # INTERMEDIATE DENSE LAYER DELIVERING 4 OUTPUT NODES
+    model.add(Dense(4))
         # TERMINAL DENSE LAYER DELIVERING TO 1 OUTPUT NODE
     model.add(Dense(NEURONS_OUTPUT_LAYER))
 
     # MODEL COMPILATION
     BP_LOSS = 'mean_squared_error'  # back propagation loss
     OPTIMIZER = 'adam'
-        # Adam - A Method for Stochastic Optimization (http://arxiv.org/abs/1412.6980v8)
-        # On the Convergence of Adam and Beyond (https://openreview.net/forum?id=ryQu7f-RZ)
     model.compile(loss=BP_LOSS, optimizer=OPTIMIZER)
 
     # MODEL SUMMARY OUTPUT
     model.summary()
 
+    # Visualization:
+    from keras.utils import plot_model
+    plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True)
+
+
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 100
-    BATCH_SIZE = 100
+    EPOCHS = 1000
+    BATCH_SIZE = 500
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,
               batch_size=BATCH_SIZE, verbose=2, callbacks=[tester])
