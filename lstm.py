@@ -6,7 +6,7 @@ Stateless LSTM with trunctated BPTT for Stock-Price Prediction (Bitcoin) with a 
 Authors: BW, TC, YD, YK and AS.
 
 This approach adheres to the REAL-USE CASE.
-We had a particular view on which data woudl be available in real use application. For this model only the data (4 features)
+We had a particular view on which data would be available in real use application. For this model only the data (4 features)
 for the time of LOOK_BACK hours needs to be available. The forward and reverse_transform (carefully hand-crafted) are
 only applied to this LOOK_BACK window. No normalization based on the whole data set is used, although used in many implementations
 online, but seen as inaccurate by us.
@@ -80,39 +80,41 @@ def main():
 
     # DATA SET IMPORT
     X = pd.read_csv('./data/curated_dataset_1.csv', usecols=[1, 2, 3, 4]).values \
-        .astype('float32') # used for the big business stuff (train, validation, test) - standard pipeline
-    print('Main data set loaded, contains un-gapped data for %i hours (samples) for 4 features each.' % len(X))
+        .astype('float32') # used for training and validaton
+    print('First data set loaded, contains un-gapped data for %i hours (samples) for 4 features each.' % len(X))
     X_additional = pd.read_csv('./data/curated_dataset_2.csv', usecols=[1, 2, 3, 4]).values \
-        .astype('float32') # used only at the end to play around (extra sausage)
-    print('Additional data set loaded, contains un-gapped data for %i hours (samples) for 4 features each.' % len(X_additional))
+        .astype('float32') # used for testing
+    print('Second data set loaded, contains un-gapped data for %i hours (samples) for 4 features each.' % len(X_additional))
 
-    # SPLIT INTO TRAINING, VALIDATION AND TEST SET
-    VAL_SIZE = 24*7*5 # 1 months
-    TEST_SIZE = 24*7*10 # 2 months
-    train_size = len(X)-VAL_SIZE-TEST_SIZE
+    # SPLIT FIRST DATA SET INTO TRAINING AND VALIDATION
+    VAL_SIZE = 24*7*20 # 4 months
+    train_size = len(X)-VAL_SIZE # -TEST_SIZE
     X_train = X[0:train_size, :]  # first in time dimension
-    X_val = X[train_size:train_size+VAL_SIZE, :] # second in time dimension
-    X_test = X[train_size:train_size+VAL_SIZE, :] # X[train_size+VAL_SIZE:, :] # third in time dimension (handicap)
+    X_val = X[train_size:, :] # second in time dimension
+
+    # MAKE SECOND DATASET THE TEST SET
+    X_test = X_additional  # third in time dimension with 1 year split to first part
 
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
     LOOK_BACK = 24*7 # [h], so 7 days, 1 week
+
+        # TRAIN
     train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
     train_x, train_y = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=False)
+
+        # VAL
     val_x_norm, val_y_norm, val_x_primes = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=True)
     val_x, val_y = preprocess_dataset(X_val, look_back=LOOK_BACK, normalized=False)
+
+        # TEST
     test_x_norm, test_y_norm, test_x_primes = preprocess_dataset(X_test, look_back=LOOK_BACK, normalized=True)
     test_x, test_y = preprocess_dataset(X_test, look_back=LOOK_BACK, normalized=False)
-        # additional dataset
-    add_x_norm, add_y_norm, add_x_primes = preprocess_dataset(X_additional, look_back=LOOK_BACK, normalized=True)
-    add_x, add_y = preprocess_dataset(X_additional, look_back=LOOK_BACK, normalized=False)
 
     # RESHAPING FOR KERAS: required dimensions are number_of_samples * time_steps (look_back_number) * features_number
     FEATURES_DIM = 4
     train_x_norm = train_x_norm.reshape((len(train_x_norm), LOOK_BACK, FEATURES_DIM))
     val_x_norm = val_x_norm.reshape((len(val_x_norm), LOOK_BACK, FEATURES_DIM))
     test_x_norm = test_x_norm.reshape((len(test_x_norm), LOOK_BACK, FEATURES_DIM))
-        # additional dataset
-    add_x_norm = add_x_norm.reshape((len(add_x_norm), LOOK_BACK, FEATURES_DIM))
 
     # BUILDING OF STATELESS (stateful=False) LSTM WITH TRUNCATED BPTT (GIVEN BY LOOK_BACK) WITH SEQUENTIAL MODEL
     model = Sequential()
@@ -132,7 +134,7 @@ def main():
     model.summary()
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 10
+    EPOCHS = 100
     BATCH_SIZE = 100
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,
@@ -173,6 +175,7 @@ def main():
     model.save_weights("model.h5")
     print("Saved model to disk (carefully crafted weights and topology are save)")
 
+    """
     # FINAL EVALUATION ON TEST SET
     test_predictions = model.predict(test_x_norm)
     for i in range(0, len(test_predictions)):
@@ -202,36 +205,7 @@ def main():
     plt.title('Prediction on test set vs. actual')
     plt.legend()
     plt.show()
-
-    # INVESTIGATION ON ADDITIONAL TEST DATA SET (ADDITIONAL TEST SET WITH HIGHER HANDICAP - TIME GAP)
-    add_predictions = model.predict(add_x_norm)
-    for i in range(0, len(add_predictions)):
-        add_predictions[i] = (add_predictions[i] + 1) * add_x_primes[i]
-    print ('------------------------ ADDITIONAL TEST SET ------------------------')
-
-        # RMSE (root mean squared error) FOR ADDITIONAL TEST
-    se_add = 0
-    for i in range(0, len(add_predictions)):
-        se_add += (add_predictions[i] - add_y[i]) ** 2
-    mse_add = se_add / len(add_predictions)
-    rmse_add = math.sqrt(mse_add)
-
-        # MAE (mean absolute error) FOR ADDTIONAL TEST
-    ae_add = 0
-    for i in range(0, len(add_predictions)):
-        ae_add += abs(add_predictions[i] - add_y[i])
-    mae_add = ae_add / len(add_predictions)
-    print('Final test on ADDITIONAL TEST set (size: %i) was done with rmse_add_test: %.4f - mae_add_test %.4f' % (len(add_predictions), rmse_add, mae_add))
-
-        # ADDITIONAL TEST PLOT
-    plt.figure()
-    plt.plot(add_predictions, label='predictions')
-    plt.plot(add_y, label='actual')
-    plt.xlabel('Time [h]')
-    plt.ylabel('Weighted price [USD]')
-    plt.title('Prediction on additional test set vs. actual')
-    plt.legend()
-    plt.show()
+    """
 
     print('\nScript was successfully executed in %.8s s.' % (time.time() - START_TIME))
 
