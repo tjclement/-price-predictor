@@ -45,7 +45,7 @@ from test_accuracy import PredictionTester
 
 # CONSTANTS
 START_TIME = time.time()
-NEURONS_HIDDEN_LAYER_1 = 2
+NEURONS_HIDDEN_LAYER_1 = 6
 NEURONS_OUTPUT_LAYER = 1
 FEATURES_NUM = 4
 
@@ -57,13 +57,12 @@ def preprocess_dataset(X, look_back, features_num = FEATURES_NUM, normalized = T
     for i in range(0, len(X)-look_back):
         window = []
         for j in range(i, i+look_back):
-            window.append(X[j, :])
+            window.append(X[j, 3])
         top_row = window[0]
         if normalized:
-            first_row = window[0]
             for i in range(0, len(window)):
                 window[i] = (window[i]/top_row)-1  # element-wise division and subtraction with broadcasting
-            x_primes.append(first_row[3])
+            x_primes.append(top_row)
         x.append(window)
     x, y, x_primes = np.array(x), np.array(y), np.array(x_primes)
     if normalized:
@@ -96,7 +95,7 @@ def main():
     X_test = X_additional  # third in time dimension with 1 year split to first part
 
     # PRE-PROCESSING OF TRAIN, VAL AND TEST SET
-    LOOK_BACK = 6 # [h], so 7 days, 1 week # ADJUSTMENT TO 6h
+    LOOK_BACK = 6 # [h], 1 month
 
         # TRAIN
     train_x_norm, train_y_norm, train_x_primes = preprocess_dataset(X_train, look_back=LOOK_BACK, normalized=True)
@@ -111,7 +110,7 @@ def main():
     test_x, test_y = preprocess_dataset(X_test, look_back=LOOK_BACK, normalized=False)
 
     # RESHAPING FOR KERAS: required dimensions are number_of_samples * time_steps (look_back_number) * features_number
-    FEATURES_DIM = 4
+    FEATURES_DIM = 1
     train_x_norm = train_x_norm.reshape((len(train_x_norm), LOOK_BACK, FEATURES_DIM))
     val_x_norm = val_x_norm.reshape((len(val_x_norm), LOOK_BACK, FEATURES_DIM))
     test_x_norm = test_x_norm.reshape((len(test_x_norm), LOOK_BACK, FEATURES_DIM))
@@ -120,8 +119,6 @@ def main():
     model = Sequential()
         # LSTM LAYER
     model.add(LSTM(NEURONS_HIDDEN_LAYER_1, input_shape=(LOOK_BACK, FEATURES_DIM), return_sequences=False))
-        # INTERMEDIATE DENSE LAYER DELIVERING 4 OUTPUT NODES
-    model.add(Dense(4))
         # TERMINAL DENSE LAYER DELIVERING TO 1 OUTPUT NODE
     model.add(Dense(NEURONS_OUTPUT_LAYER))
 
@@ -139,7 +136,7 @@ def main():
 
 
     # FITTING OF MODEL ONTO TRAINING DATA
-    EPOCHS = 1000
+    EPOCHS = 100
     BATCH_SIZE = 500
     tester = PredictionTester(val_x_norm, val_y, val_x_primes, train_x_norm, train_y, train_x_primes) # see: test_accuracy.py module
     model.fit(x=train_x_norm, y=train_y_norm, shuffle=True, validation_data=(val_x_norm, val_y_norm), epochs=EPOCHS,
@@ -174,13 +171,12 @@ def main():
         # from ._conv import register_converters as _register_converters (WHICH CAN BE IGNORED, read online)
         # SAVE TOPOLOGY TO JSON
     model_json = model.to_json()
-    with open("model.json", "w") as json_file:
+    with open("seeds_model.json", "w") as json_file:
         json_file.write(model_json)
         # SAVE WEIGHTS TO HDF5
-    model.save_weights("model.h5")
+    model.save_weights("seeds_model.h5")
     print("Saved model to disk (carefully crafted weights and topology are save)")
 
-    """
     # FINAL EVALUATION ON TEST SET
     test_predictions = model.predict(test_x_norm)
     for i in range(0, len(test_predictions)):
@@ -210,7 +206,6 @@ def main():
     plt.title('Prediction on test set vs. actual')
     plt.legend()
     plt.show()
-    """
 
     print('\nScript was successfully executed in %.8s s.' % (time.time() - START_TIME))
 
